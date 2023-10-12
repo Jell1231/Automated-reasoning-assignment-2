@@ -1,4 +1,5 @@
 import os
+from dd import autoref as _bdd
 
 
 # Define a Graph class to represent the graph and perform coloring
@@ -69,6 +70,21 @@ def parse_dimacs(f):
     return g
 
 
+def create_bdd(bdd, adjacency_list, colors):
+    vertices = len(adjacency_list)
+    for c in range(colors):
+        for n in range(vertices):
+            bdd.add_var(f'x_{n}{c}')
+    expression_string = ''
+    for n in range(len(adjacency_list)):
+        for neighbor in adjacency_list[n]:
+            for c in range(colors):
+                expression_string += fr'(~x_{n}{c} \/ ~x_{neighbor}{c}) /\ '
+    print(expression_string[:-4])
+    u = bdd.add_expr(expression_string[:-4])
+    return u
+
+
 if __name__ == '__main__':
     # Specify the directory containing DIMACS graph files
     dir_str = "./data/small-dimacs/"
@@ -80,6 +96,8 @@ if __name__ == '__main__':
     directory = os.fsencode(dir_str)
 
     for file in os.listdir(directory):
+        # Initialize the BDD manager
+        bdd = _bdd.BDD()
         filename = os.fsdecode(file)
 
         # Parse the DIMACS file and create the graph
@@ -90,4 +108,5 @@ if __name__ == '__main__':
         print(f"Minimum number of registers required for {filename}: {min_registers}")
 
         # Use the minimum number of registers as the upper bound for k
-        k = min_registers
+        res_bdd = create_bdd(bdd, graph.graph, min_registers)
+        print(res_bdd.count())
