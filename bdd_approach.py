@@ -74,12 +74,12 @@ def create_bdd(bdd, adjacency_list, colors):
     vertices = len(adjacency_list)
     for c in range(colors):
         for n in range(vertices):
-            bdd.add_var(f'x_{n}{c}')
+            bdd.add_var(f'x_{n}_{c}')
     expression_string = ''
     for n in range(len(adjacency_list)):
         for neighbor in adjacency_list[n]:
             for c in range(colors):
-                expression_string += fr'(~x_{n}{c} \/ ~x_{neighbor}{c}) /\ '
+                expression_string += fr'(~x_{n}_{c} \/ ~x_{neighbor}_{c}) /\ '
     print(expression_string[:-4])
     u = bdd.add_expr(expression_string[:-4])
     return u
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     dir_str = "./data/small-dimacs/"
 
     # Specify the DIMACS graph file you want to analyze
-    gcd_file = f"{dir_str}gcd.col"
+    gcd_file = f"gcd.col"
 
     # Get a list of files in the directory
     directory = os.fsencode(dir_str)
@@ -109,4 +109,4 @@ if __name__ == '__main__':
 
         # Use the minimum number of registers as the upper bound for k
         res_bdd = create_bdd(bdd, graph.graph, min_registers)
-        print(res_bdd.count())
+        bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[res_bdd])
