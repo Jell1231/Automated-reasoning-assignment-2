@@ -46,7 +46,7 @@ class Graph:
                 return False
         return True
 
-    def count_k_colorings(self, k, memo, vertex):
+    def count_mem_k_colorings(self, k, memo, vertex):
         if vertex == self.V:
             return 1
         if (vertex, k) in memo:
@@ -55,15 +55,30 @@ class Graph:
         for color in range(k):
             if self.is_safe(vertex, color):
                 self.colors[vertex] = color
-                count += self.count_k_colorings(k, memo, vertex + 1)
+                count += self.count_mem_k_colorings(k, memo, vertex + 1)
                 self.colors[vertex] = -1
         memo[(vertex, k)] = count
         return count
 
-    def total_k_colorings(self, k):
+    def total_memory_k_colorings(self, k):
         self.colors = [-1] * self.V
         memo = {}
-        return self.count_k_colorings(k, memo, 0)
+        return self.count_mem_k_colorings(k, memo, 0)
+
+    def count_naive_k_colorings(self, k, vertex=0):
+        if vertex == self.V:
+            return 1
+        count = 0
+        for color in range(k):
+            if self.is_safe(vertex, color):
+                self.colors[vertex] = color
+                count += self.count_naive_k_colorings(k, vertex + 1)
+                self.colors[vertex] = -1
+        return count
+
+    def total_naive_k_colorings(self, k):
+        self.colors = [-1] * self.V
+        return self.count_naive_k_colorings(k)
 
 
 # Function to parse the DIMACS graph file
@@ -116,6 +131,7 @@ if __name__ == '__main__':
         # Use the minimum number of registers as the upper bound for k
 
         colors_k = min_registers
-        total_colorings = graph.total_k_colorings(colors_k)
+        total_colorings = graph.total_naive_k_colorings(colors_k)
+        total_mem_colorings = graph.total_memory_k_colorings(colors_k)
 
         print(f"Total number of different {colors_k}-colorings: {total_colorings}")

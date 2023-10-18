@@ -9,9 +9,9 @@ def parse_dimacs(f, bdd_dimacs):
         lines = file.readlines()
 
     vertex_ordering = []
-    u = bdd.true
+    u = bdd_dimacs.true
     # read the lines of the dimacs file
-    for line in lines[:50]:
+    for line in lines:
         # ignore comments unless its a vertex ordering
         if line.startswith('c'):
             if line.split()[2] == 'vo':
