@@ -1,5 +1,5 @@
 import os
-from dd import autoref as _bdd
+from dd.autoref import BDD
 
 
 # Define a Graph class to represent the graph and perform coloring
@@ -70,7 +70,7 @@ def parse_dimacs(f):
     return g
 
 
-def create_bdd(bdd, adjacency_list, colors):
+def create_bdd_max_opperman(bdd, adjacency_list, colors):
     vertices = len(adjacency_list)
     for c in range(colors):
         for n in range(vertices):
@@ -85,6 +85,64 @@ def create_bdd(bdd, adjacency_list, colors):
     return u
 
 
+def create_bdd(f, color_nr):
+    bdd = BDD()
+
+    with open(f, 'r') as file:
+        lines = file.readlines()
+
+    # Create list of variables and clauses
+    vars = []
+    clauses = []
+
+    # Loop over the input file lines
+    for line in lines:
+        if line.startswith('c'):
+            # Ignore comments
+            continue
+        elif line.startswith('p'):
+            # Ignore describing line
+            continue
+        elif line.startswith('e'):
+            _, u, v = line.strip().split()
+            # Add to variables list, add clause that two vertices may not be the same color
+            for i in range(color_nr):
+                vars.append(f'x_{u}_{i}')
+                vars.append(f'x_{v}_{i}')
+                clauses.append(f'(!x_{u}_{i} | !x_{v}_{i})')
+        else:
+            raise Exception("This should not happen")
+    
+    # Sort such that we can use the list later
+    vars = sorted(set(vars))
+    
+    # Create clauses for the statement, a vertex may have only one color.
+    for i in range(0, len(vars), color_nr):
+        variable_group = vars[i:i+color_nr]
+        clause = []
+
+        # Create a clause for each combination of variables in the group
+        for j in range(color_nr):
+            variable_combo = [f"{'!' if l != j else ''}{variable}" for l, variable in enumerate(variable_group)]
+            clause.append("(" + " & ".join(variable_combo) + ")")
+
+        # Combine the individual clauses with ' | ' to ensure only one is true
+        clauses.append(" | ".join(clause))
+    
+    # Create all BDD variables
+    [bdd.add_var(var) for var in vars]
+
+    cnf = bdd.true
+    for i in range(len(clauses)):
+        cnf &= bdd.add_expr(clauses[i])
+
+    print(f'k: {color_nr}, size: {len(cnf)}, models: {bdd.count(cnf)}')
+    print()
+    
+    # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[bdd])
+            
+
+
 if __name__ == '__main__':
     # Specify the directory containing DIMACS graph files
     dir_str = "./data/small-dimacs/"
@@ -97,7 +155,6 @@ if __name__ == '__main__':
 
     for file in os.listdir(directory):
         # Initialize the BDD manager
-        bdd = _bdd.BDD()
         filename = os.fsdecode(file)
 
         # Parse the DIMACS file and create the graph
@@ -108,5 +165,7 @@ if __name__ == '__main__':
         print(f"Minimum number of registers required for {filename}: {min_registers}")
 
         # Use the minimum number of registers as the upper bound for k
-        res_bdd = create_bdd(bdd, graph.graph, min_registers)
-        bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[res_bdd])
+        # if (filename=="gcd.col"):
+        create_bdd(f"{dir_str}{filename}", min_registers)
+        # res_bdd = create_bdd(bdd, graph.graph, min_registers)
+        # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[res_bdd])
