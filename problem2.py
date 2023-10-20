@@ -50,8 +50,8 @@ def parse_dimacs(f, bdd_dimacs):
     return bdd_dimacs, u, vertex_ordering
 
 
-def auto_include(features, exprs, order, auto_func):
-    f = open(f"./final_configurations2/{auto_func}.txt", "w")
+def auto_include(features, exprs, order, auto_func, dimacs_name):
+    f = open(f"./final_configurations2/{dimacs_name}-{auto_func}.txt", "w")
     added = 0
     negated_added = 0
     test_bdd = _bdd.BDD()
@@ -165,12 +165,12 @@ def get_model_counts(b, exprs, feat, features, negated_feat):
     return negated_count, normal_count
 
 
-def print_choice(choice, f_bdd, ex, ordering):
+def print_choice(choice, fname, f_bdd, ex, ordering):
     start_time = time.time()
-    bdd_final, expressions_final, add_arr = auto_include(f_bdd, ex, ordering, choice)
+    bdd_final, expressions_final, add_arr = auto_include(f_bdd, ex, ordering, choice, fname)
     # state the overall execution time, the final configuration, and the number of configuration steps made
     exec_time = time.time() - start_time
-    print(f"Execution time of {choice}: {exec_time} seconds")
+    print(f"Execution time of {fname}-{choice}: {exec_time} seconds")
     print(f"Model count: {bdd_final.count(expressions_final)}")
     print(f"Choices: {add_arr[0] + add_arr[1]}/{len(ordering)}, of which positive: {add_arr[0]}, negative: {add_arr[1]}")
 
@@ -205,9 +205,9 @@ if __name__ == '__main__':
         # easy to run everything; change auto_choice to choice as well :)
         if auto_choice == "all":
             for choice in auto_choices:
-                print_choice(choice, features_bdd, expressions, vo)
+                print_choice(choice, filename, features_bdd, expressions, vo)
         else:
-            print_choice(auto_choice, features_bdd, expressions, vo)
+            print_choice(auto_choice, filename, features_bdd, expressions, vo)
 
         # Find the minimum number of registers required using greedy coloring
         print(f"Bdd {filename}: Done")
