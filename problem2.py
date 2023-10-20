@@ -153,10 +153,24 @@ def get_model_counts(b, exprs, feat, features, negated_feat):
     v = features.copy(exprs, b)
     v &= b.add_expr(feat)
     normal_count = b.count(v)
+
     v = features.copy(exprs, b)
     v &= b.add_expr(negated_feat)
     negated_count = b.count(v)
     return negated_count, normal_count
+
+
+def print_choice(choice, f_bdd, ex, ordering):
+    start_time = time.time()
+    test_bdd = _bdd.BDD()
+    [test_bdd.add_var(var) for var in f_bdd.vars]
+    test_expressions = f_bdd.copy(ex, test_bdd)
+    bdd_final, expressions_final, add_arr = auto_include(test_bdd, test_expressions, vo, choice)
+    # state the overall execution time, the final configuration, and the number of configuration steps made
+    exec_time = time.time() - start_time
+    print(f"Execution time of {choice}: {exec_time} seconds")
+    print(f"Model count: {bdd_final.count(expressions_final)}")
+    print(f"Choices: {add_arr[0] + add_arr[1]}/{len(vo)}, of which positive: {add_arr[0]}, negative: {add_arr[1]}")
 
 
 if __name__ == '__main__':
@@ -183,17 +197,15 @@ if __name__ == '__main__':
         filename = os.fsdecode(file)
 
         # Parse the DIMACS file and create the graph
+        print(f"Bdd {filename}: In progress...")
         features_bdd, expressions, vo = parse_dimacs(f"{dir_str}{filename}", bdd)
         print(f"bdd model count {filename}: {features_bdd.count(expressions)}")
         # easy to run everything; change auto_choice to choice as well :)
-        for choice in auto_choices:
-            start_time = time.time()
-            bdd_final, expressions_final, add_arr = auto_include(features_bdd, expressions, vo, choice)
-            # state the overall execution time, the final configuration, and the number of configuration steps made
-            exec_time = time.time() - start_time
-            print(f"Execution time of {choice}: {exec_time} seconds")
-            print(f"Model count: {bdd_final.count(expressions_final)}")
-            print(f"Choices: {add_arr[0] + add_arr[1]}/{len(vo)}, of which positive: {add_arr[0]}, negative: {add_arr[1]}")
+        if auto_choice == "all":
+            for choice in auto_choices:
+                print_choice(choice, features_bdd, expressions, vo)
+        else:
+            print_choice(auto_choice, features_bdd, expressions, vo)
 
         # Find the minimum number of registers required using greedy coloring
         print(f"Bdd {filename}: Done")
