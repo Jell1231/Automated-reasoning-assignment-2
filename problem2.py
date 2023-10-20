@@ -33,15 +33,16 @@ def parse_dimacs(f, bdd_dimacs):
             # remove the zero at the end
             variables = line.strip().split()[:-1]
             # create the expression
-            expression_string = ''
+            disjunction = []
             for v in variables:
                 # negations
                 if v.startswith('-'):
-                    expression_string += fr'~x_{v[1:]} | '
+                    disjunction.append(fr'~x_{v[1:]}')
+                # positive
                 else:
-                    expression_string += fr'x_{v} | '
+                    disjunction.append(fr'x_{v}')
             # add the expression to the bdd
-            expression = fr'({expression_string[:-3]})'
+            expression = fr'({" | ".join(disjunction)})'
             expression_list.append(expression)
             # u &= bdd_dimacs.add_expr(expression)
     for i in tqdm(expression_list):
