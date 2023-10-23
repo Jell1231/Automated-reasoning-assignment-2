@@ -176,6 +176,25 @@ def print_choice(choice, fname, bdd, expressions, ordering):
                    f"of which positive: {add_arr[0]}, negative: {add_arr[1]}\n")
     out_file.close()
 
+    convert_to_dimacs(os.path.join("final_configurations2", f"{fname}-{choice}.txt"),
+                      os.path.join("dimacs2", f"{fname.rstrip('.dimacs')}-{choice}.dimacs"))
+
+
+def convert_to_dimacs(input_file, output_file):
+    dimacs_config = []
+    with open(input_file, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if line.startswith("Including "):
+                var = line[len("Including x"):]
+                dimacs_config.append(var)
+            elif line.startswith("Excluding "):
+                var = line[len("Excluding x"):]
+                dimacs_config.append(f"-{var}")
+
+    with open(output_file, 'w') as outfile:
+        outfile.write(" ".join(dimacs_config) + " 0\n")
+
 
 if __name__ == '__main__':
     # Specify the directory containing DIMACS graph files
