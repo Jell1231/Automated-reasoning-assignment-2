@@ -1848,6 +1848,6 @@ Excluding x1849
 Excluding x554
 Excluding x1233
 Excluding x1850
-Execution time of uClinux.dimacs-b: 2324.6415214538574 seconds
+Execution time of uClinux.dimacs-b: 1851.2242288589478 seconds
 Model count: 1.0
 Choices: 1850/1850, of which positive: 7, negative: 1843
