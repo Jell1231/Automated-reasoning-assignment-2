@@ -556,6 +556,6 @@ Excluding x108
 Excluding x273
 Excluding x167
 Excluding x373
-Execution time of buildroot.dimacs-b: 35.11702799797058 seconds
+Execution time of buildroot.dimacs-b: 35.02191972732544 seconds
 Model count: 1.0
 Choices: 558/565, of which positive: 1, negative: 557
