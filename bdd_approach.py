@@ -106,15 +106,18 @@ def create_bdd(f, color_nr):
         elif line.startswith('e'):
             _, u, v = line.strip().split()
             # Add to variables list, add clause that two vertices may not be the same color
+            clause = []
             for i in range(color_nr):
                 vars.append(f'x_{u}_{i}')
                 vars.append(f'x_{v}_{i}')
-                clauses.append(f'(!x_{u}_{i} | !x_{v}_{i})')
+                clause.append(f'(!x_{u}_{i} | !x_{v}_{i})')
+            clauses.append(" & ".join(clause))
         else:
             raise Exception("This should not happen")
     
     # Sort such that we can use the list later
     vars = sorted(set(vars))
+    print("Nr of clauses: ", len(clauses))
     
     # Create clauses for the statement, a vertex may have only one color.
     for i in range(0, len(vars), color_nr):
@@ -133,6 +136,7 @@ def create_bdd(f, color_nr):
     [bdd.add_var(var) for var in vars]
 
     cnf = bdd.true
+    # print("Nr of clauses: ", len(clauses))
     for i in range(len(clauses)):
         cnf &= bdd.add_expr(clauses[i])
 
@@ -141,11 +145,96 @@ def create_bdd(f, color_nr):
     
     # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[bdd])
             
+def create_bit_encoded_bdd(f, color_nr):
+    bdd = BDD()
+
+    with open(f, 'r') as file:
+        lines = file.readlines()
+
+    # Create list of variables and clauses
+    vars = []
+    clauses = []
+    nodes = []
+    bits_needed = (color_nr-1).bit_length()
+
+    # Loop over the input file lines
+    for line in lines:
+        if line.startswith('c'):
+            # Ignore comments
+            continue
+        elif line.startswith('p'):
+            # Ignore describing line
+            continue
+        elif line.startswith('e'):
+            _, u, v = line.strip().split()
+            nodes.append(u)
+            nodes.append(v)
+            # Add to variables list, add clause that two vertices may not be the same color
+            # This time we use a bit representation for this. So we make log(color_nr) variables for each vertex, which is the
+            # nr of bits needed to represent the amount of colors.
+            for i in range(bits_needed):
+                vars.append(f'x_{u}_{i}')
+                vars.append(f'x_{v}_{i}')
+            
+            for i in range(color_nr):
+                current = bin(i)[2:]
+                current = f'{current.zfill(bits_needed)}'
+
+                for j in range(bits_needed):
+                    clauseU = []
+                    clauseV = []
+                    for nr in current:
+                        clauseU.append(f'!x_{u}_{j}' if nr=="0" else f'x_{u}_{j}')
+                        clauseV.append(f'!x_{v}_{j}' if nr=="0" else f'x_{v}_{j}')
+                clauses.append("!(" + " & ".join(clauseU) + ") | !(" + " & ".join(clauseV) + ")")
+        else:
+            raise Exception("This should not happen")
+    
+    # Make vars a set such that no duplicates are present
+    vars = set(vars)
+    nodes = set(nodes)
+    
+    # Create clauses for the statement, a vertex may have only one color.
+    temp_vars = []
+    for node in nodes:
+        for i in range(color_nr):
+            current = bin(i)[2:]
+            current = f'{current.zfill(bits_needed)}'
+
+            for j in range(bits_needed):
+                clause = []
+                for nr in current:
+                    clause.append(f'!x_{node}_{j}' if nr=="0" else f'x_{node}_{j}')
+            temp_vars.append("(" + " & ".join(clause) + ")")
+
+    for i in range(0, len(nodes)*color_nr, color_nr):
+        variable_group = temp_vars[i:i+color_nr]
+        clause = []
+
+        # Create a clause for each combination of variables in the group
+        for j in range(color_nr):
+            variable_combo = [f"{'!' if l != j else ''}{variable}" for l, variable in enumerate(variable_group)]
+            clause.append("(" + " & ".join(variable_combo) + ")")
+
+        # Combine the individual clauses with ' | ' to ensure only one is true    
+        clauses.append(" | ".join(clause))
+    
+    # Create all BDD variables
+    [bdd.add_var(var) for var in vars]
+
+    cnf = bdd.true
+    for clause in clauses:
+        cnf &= bdd.add_expr(clause)
+
+    print(f'k: {color_nr}, size: {len(cnf)}, models: {bdd.count(cnf)}')
+    print()
+    
+    # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[bdd])
 
 
 if __name__ == '__main__':
     # Specify the directory containing DIMACS graph files
-    dir_str = "./data/small-dimacs/"
+    dir_str = "./data/less-dimacs/"
 
     # Specify the DIMACS graph file you want to analyze
     gcd_file = f"gcd.col"
@@ -167,5 +256,6 @@ if __name__ == '__main__':
         # Use the minimum number of registers as the upper bound for k
         # if (filename=="gcd.col"):
         create_bdd(f"{dir_str}{filename}", min_registers)
+            # create_bit_encoded_bdd(f"{dir_str}{filename}", min_registers)
         # res_bdd = create_bdd(bdd, graph.graph, min_registers)
         # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[res_bdd])
