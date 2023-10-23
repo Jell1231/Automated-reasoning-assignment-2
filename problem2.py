@@ -196,8 +196,6 @@ if __name__ == '__main__':
 
     sys.setrecursionlimit(2500)
     for f in os.listdir(directory):
-        if os.fsdecode(f) != "uClinux.dimacs":
-            continue
         # Initialize the BDD manager
         bdd = BDD()
         filename = os.fsdecode(f)
