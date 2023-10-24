@@ -541,6 +541,6 @@ Excluding x540
 Excluding x541
 Excluding x542
 Excluding x543
-Execution time of toybox.dimacs-d: 76.16032409667969 seconds
+Execution time of toybox.dimacs-d: 25.553489446640015 seconds
 Model count: 1.0
 Choices: 543/544, of which positive: 124, negative: 419

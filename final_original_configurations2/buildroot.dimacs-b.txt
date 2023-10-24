@@ -549,6 +549,6 @@ Excluding x548
 Excluding x549
 Excluding x550
 Excluding x551
-Execution time of buildroot.dimacs-b: 42.139334201812744 seconds
+Execution time of buildroot.dimacs-b: 39.17545676231384 seconds
 Model count: 1.0
 Choices: 551/565, of which positive: 1, negative: 550

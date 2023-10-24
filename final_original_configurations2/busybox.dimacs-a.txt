@@ -371,6 +371,6 @@ Including x971
 Including x979
 Excluding x981
 Excluding x988
-Execution time of busybox.dimacs-a: 550.5094385147095 seconds
+Execution time of busybox.dimacs-a: 316.6949427127838 seconds
 Model count: 1.0
 Choices: 373/998, of which positive: 340, negative: 33
