@@ -216,7 +216,7 @@ def convert_to_dimacs(input_file, output_file):
 
 if __name__ == '__main__':
     # Specify the directory containing DIMACS graph files
-    dir_str = os.path.join("data", "conf-original-dimacs")
+    dir_str = os.path.join("data", "feature-dimacs")
 
     # Specify the DIMACS graph file you want to analyze
     gcd_file = f"buildroot.dimacs"
