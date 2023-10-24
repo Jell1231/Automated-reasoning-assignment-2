@@ -25,8 +25,13 @@ def parse_dimacs(f, bdd_dimacs):
         # add the variables when the line with the number of vertices is found
         elif line.startswith('p'):
             vertices = int(line.split()[2])
-            for vertex in range(1, vertices + 1):
-                bdd_dimacs.add_var(f'x{vertex}')
+            if len(vertex_ordering) == 0:
+                for vertex in range(1, vertices + 1):
+                    bdd_dimacs.add_var(f'x{vertex}')
+                    vertex_ordering.append(vertex-1)
+            else:
+                for vertex in range(1, vertices + 1):
+                    bdd_dimacs.add_var(f'x{vertex}')
         # add the expressions
         else:
             # remove the zero at the end
@@ -43,6 +48,7 @@ def parse_dimacs(f, bdd_dimacs):
             # add the expression to the bdd
             expression = f'({" | ".join(disjunction)})'
             u &= bdd_dimacs.add_expr(expression)
+
     # do model counting and return the vertex ordering
     return bdd_dimacs, u, vertex_ordering
 
@@ -210,7 +216,7 @@ def convert_to_dimacs(input_file, output_file):
 
 if __name__ == '__main__':
     # Specify the directory containing DIMACS graph files
-    dir_str = os.path.join("data", "feature-dimacs")
+    dir_str = os.path.join("data", "conf-original-dimacs")
 
     # Specify the DIMACS graph file you want to analyze
     gcd_file = f"buildroot.dimacs"
