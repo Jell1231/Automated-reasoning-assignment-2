@@ -25,8 +25,13 @@ def parse_dimacs(f, bdd_dimacs):
         # add the variables when the line with the number of vertices is found
         elif line.startswith('p'):
             vertices = int(line.split()[2])
-            for vertex in range(1, vertices + 1):
-                bdd_dimacs.add_var(f'x{vertex}')
+            if len(vertex_ordering) == 0:
+                for vertex in range(1, vertices + 1):
+                    bdd_dimacs.add_var(f'x{vertex}')
+                    vertex_ordering.append(vertex-1)
+            else:
+                for vertex in range(1, vertices + 1):
+                    bdd_dimacs.add_var(f'x{vertex}')
         # add the expressions
         else:
             # remove the zero at the end
@@ -43,6 +48,7 @@ def parse_dimacs(f, bdd_dimacs):
             # add the expression to the bdd
             expression = f'({" | ".join(disjunction)})'
             u &= bdd_dimacs.add_expr(expression)
+
     # do model counting and return the vertex ordering
     return bdd_dimacs, u, vertex_ordering
 
@@ -137,9 +143,21 @@ def interactive_mode(added, test_bdd, expressions, f, bdd, negated_added, order)
         negated_feat = f'~x{node}'
         if feat in bdd.support(expressions):
             negated_count, normal_count = get_model_counts(test_bdd, expressions, feat, bdd, negated_feat)
-            incl = input(f"Include {feat}? (y/n)\n" +
-                         f"Valid configurations if positive: {normal_count}; if negative: {negated_count}; (y/n)")
-            if "y" in incl.lower():
+            if normal_count == 0:
+                f.write(f"Excluding {feat}\n")
+                negated_added += 1
+                expressions &= bdd.add_expr(negated_feat)
+                print(f"Excluded {feat} to prevent model count being 0")
+                continue
+            if negated_count == 0:
+                f.write(f"Including {feat}\n")
+                added += 1
+                expressions &= bdd.add_expr(feat)
+                print(f"Included {feat} to prevent model count being 0")
+                continue
+            include = input(f"Include {feat}? (y/n)\n" +
+                         f"Valid configurations if positive: {normal_count}; if negative: {negated_count}\n")
+            if "y" in include.lower():
                 f.write(f"Including {feat}\n")
                 added += 1
                 expressions &= bdd.add_expr(feat)
