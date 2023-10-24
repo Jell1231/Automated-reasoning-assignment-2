@@ -137,9 +137,21 @@ def interactive_mode(added, test_bdd, expressions, f, bdd, negated_added, order)
         negated_feat = f'~x{node}'
         if feat in bdd.support(expressions):
             negated_count, normal_count = get_model_counts(test_bdd, expressions, feat, bdd, negated_feat)
-            incl = input(f"Include {feat}? (y/n)\n" +
-                         f"Valid configurations if positive: {normal_count}; if negative: {negated_count}; (y/n)")
-            if "y" in incl.lower():
+            if normal_count == 0:
+                f.write(f"Excluding {feat}\n")
+                negated_added += 1
+                expressions &= bdd.add_expr(negated_feat)
+                print(f"Excluded {feat} to prevent model count being 0")
+                continue
+            if negated_count == 0:
+                f.write(f"Including {feat}\n")
+                added += 1
+                expressions &= bdd.add_expr(feat)
+                print(f"Included {feat} to prevent model count being 0")
+                continue
+            include = input(f"Include {feat}? (y/n)\n" +
+                         f"Valid configurations if positive: {normal_count}; if negative: {negated_count}\n")
+            if "y" in include.lower():
                 f.write(f"Including {feat}\n")
                 added += 1
                 expressions &= bdd.add_expr(feat)
