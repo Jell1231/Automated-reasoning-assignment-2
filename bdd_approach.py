@@ -1,5 +1,6 @@
 import os
-from dd.autoref import BDD
+from time import time
+from dd.cudd import BDD
 
 
 # Define a Graph class to represent the graph and perform coloring
@@ -70,30 +71,14 @@ def parse_dimacs(f):
     return g
 
 
-def create_bdd_max_opperman(bdd, adjacency_list, colors):
-    vertices = len(adjacency_list)
-    for c in range(colors):
-        for n in range(vertices):
-            bdd.add_var(f'x_{n}_{c}')
-    expression_string = ''
-    for n in range(len(adjacency_list)):
-        for neighbor in adjacency_list[n]:
-            for c in range(colors):
-                expression_string += fr'(~x_{n}_{c} \/ ~x_{neighbor}_{c}) /\ '
-    print(expression_string[:-4])
-    u = bdd.add_expr(expression_string[:-4])
-    return u
-
-
 def create_bdd(f, color_nr):
     bdd = BDD()
+    result = bdd.true
 
     with open(f, 'r') as file:
         lines = file.readlines()
 
-    # Create list of variables and clauses
     vars = []
-    clauses = []
 
     # Loop over the input file lines
     for line in lines:
@@ -110,14 +95,16 @@ def create_bdd(f, color_nr):
             for i in range(color_nr):
                 vars.append(f'x_{u}_{i}')
                 vars.append(f'x_{v}_{i}')
-                clause.append(f'(!x_{u}_{i} | !x_{v}_{i})')
-            clauses.append(" & ".join(clause))
+                bdd.add_var(f'x_{u}_{i}')
+                bdd.add_var(f'x_{v}_{i}')
+
+                c = f'(!x_{u}_{i} | !x_{v}_{i})'
+                result &= bdd.add_expr(c)
         else:
             raise Exception("This should not happen")
     
     # Sort such that we can use the list later
     vars = sorted(set(vars))
-    print("Nr of clauses: ", len(clauses))
     
     # Create clauses for the statement, a vertex may have only one color.
     for i in range(0, len(vars), color_nr):
@@ -130,21 +117,21 @@ def create_bdd(f, color_nr):
             clause.append("(" + " & ".join(variable_combo) + ")")
 
         # Combine the individual clauses with ' | ' to ensure only one is true
-        clauses.append(" | ".join(clause))
-    
-    # Create all BDD variables
-    [bdd.add_var(var) for var in vars]
+        u = bdd.false
+        for c in clause:
+            u |= bdd.add_expr(c)
+        result &= u
 
-    cnf = bdd.true
-    # print("Nr of clauses: ", len(clauses))
-    for i in range(len(clauses)):
-        cnf &= bdd.add_expr(clauses[i])
-
-    print(f'k: {color_nr}, size: {len(cnf)}, models: {bdd.count(cnf)}')
-    print()
+        # c = " | ".join(clause)
+        # result &= bdd.add_expr(c)
     
-    # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[bdd])
-            
+    # print(bdd.statistics())
+    print(f'k: {color_nr}, size: {len(result)}, models: {bdd.count(result)}')
+
+
+################################################
+# non-working :)))))
+################################################          
 def create_bit_encoded_bdd(f, color_nr):
     bdd = BDD()
 
@@ -228,13 +215,11 @@ def create_bit_encoded_bdd(f, color_nr):
 
     print(f'k: {color_nr}, size: {len(cnf)}, models: {bdd.count(cnf)}')
     print()
-    
-    # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[bdd])
-
+##########################################################################
 
 if __name__ == '__main__':
     # Specify the directory containing DIMACS graph files
-    dir_str = "./data/less-dimacs/"
+    dir_str = "./data/small-dimacs/"
 
     # Specify the DIMACS graph file you want to analyze
     gcd_file = f"gcd.col"
@@ -243,6 +228,7 @@ if __name__ == '__main__':
     directory = os.fsencode(dir_str)
 
     for file in os.listdir(directory):
+        start = time()
         # Initialize the BDD manager
         filename = os.fsdecode(file)
 
@@ -254,8 +240,9 @@ if __name__ == '__main__':
         print(f"Minimum number of registers required for {filename}: {min_registers}")
 
         # Use the minimum number of registers as the upper bound for k
-        # if (filename=="gcd.col"):
+        # if (filename=="zeroin-less.col"):
+        #     create_bdd(f"{dir_str}{filename}", min_registers)
         create_bdd(f"{dir_str}{filename}", min_registers)
-            # create_bit_encoded_bdd(f"{dir_str}{filename}", min_registers)
-        # res_bdd = create_bdd(bdd, graph.graph, min_registers)
-        # bdd.dump(f'bdds/{filename[:-4]}.pdf', roots=[res_bdd])
+        stop = time()
+        print(f"Runtime of {file}: ", stop-start)
+        print()
