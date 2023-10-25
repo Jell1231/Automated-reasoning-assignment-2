@@ -124,13 +124,30 @@ def create_bdd(graph):
         big_clause = '!(' + ' & '.join(clause) + ')'
         print(big_clause)
         result &= bdd.add_expr(big_clause)
+    
+    target = bdd.add_expr(fr'!x_0 & x_1')
+    q = bdd.false
+    qold = None
+    prime = {"x_0": "x_0_prime", "x_1": "x_1_prime"}
+    qvars = {"x_0_prime", "x_1_prime"}
+    # fixpoint reached ?
+    while q != qold:
+        print(bdd.to_expr(q))
+        qold = q
+        next_q = bdd.let(prime, q)
+        u = result & next_q
+        # existential quantification over x0', x1'
+        pred = bdd.quantify(u, qvars, forall=False)
+        q = q | pred | target
+    
+    # print(list(bdd.pick_iter(q)))
+    print(bdd.pick(q))
+    print(bdd.to_expr(q))
 
-    print(f'size: {len(result)}, models: {bdd.count(result)}')
-            
 # Main method
 if __name__ == '__main__':
      # Specify the directory containing DIMACS graph files
-    dir_str = "./data/less-dimacs/"
+    dir_str = "./data/p3_data/"
 
     # Get a list of files in the directory
     directory = os.fsencode(dir_str)
@@ -141,8 +158,9 @@ if __name__ == '__main__':
         # Initialize the BDD manager
         filename = os.fsdecode(file)
 
-        if (filename=="gcd.col"):        
-            # Parse the DIMACS file and create the graph
-            graph = parse_dimacs(f"{dir_str}{filename}")
+        # if (filename=="gcd.col"):        
+        # Parse the DIMACS file and create the graph
+        graph = parse_dimacs(f"{dir_str}{filename}")
 
-            create_bdd(graph)
+        create_bdd(graph)
+        print()
