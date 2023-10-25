@@ -11,7 +11,6 @@ class Graph:
     def add_edge(self, u, v):
         # Add an edge between vertices u and v in the graph
         self.graph[u].append(v)
-        self.graph[v].append(u)
 
     def greedy_coloring(self):
         # Greedy graph coloring algorithm
@@ -77,12 +76,12 @@ def create_bdd(graph):
 
     bin_vertex_nr = (graph.V - 1).bit_length()
 
-    # Add all possible variables 
+    # Add all variables, only need bin_vertex_nr since we use the bit-encoding
     for i in range(bin_vertex_nr):
         bdd.add_var(f'x_{i}')
         bdd.add_var(f'x_{i}_prime')
 
-    # Loop over all vertices in the adjacency list
+    # Loop over all vertices in the adjacency list and create all transition clauses accordingly
     for i in range(len(graph.graph)):
         from_vertex = bin(i)[2:]
         from_vertex = f'{from_vertex.zfill(bin_vertex_nr)}'
@@ -92,20 +91,43 @@ def create_bdd(graph):
             
             clause = []
             number = 0
+            # Create states x_0, !x_1, ....
             for nr in from_vertex:
                 clause.append(f'!x_{number}' if nr=="0" else f'x_{number}')
                 number+=1
             
             number = 0
+            # Create states x_0_prime, !x_1_prime, ....
             for nr in to_vertex:
                 clause.append(f'!x_{number}_prime' if nr=="0" else f'x_{number}_prime')
                 number+=1
             
+            # Transition from state to state (x_0 & !x_1 & x_2 & x3 & x_0_prime & !x_1_prime & x_2_prime & x3_prime)
             big_clause = "(" + ' & '.join(clause) + ")"
-            result |= bdd.add_expr(big_clause)
+            print(big_clause)
             
+            # Or everything
+            result |= bdd.add_expr(big_clause)
 
+    bit_max = bin_vertex_nr**2
+    
+    # Add that states that can be made with the bit-encoding, but are not vertices in the transition diagram
+    # !(x_0 & x_1 & x_2 & !x_3) & !(x_0 & x_1 & x_2 & x_3) & ....
+    for i in range(graph.V, bit_max):
+        clause = []
+        bit_nr = bin(i)[2:]
+        var = 0
+        for nr in bit_nr:
+            clause.append(f'!x_{var}' if nr=="0" else f'x_{var}')
+            var+=1
 
+        big_clause = '!(' + ' & '.join(clause) + ')'
+        print(big_clause)
+        result &= bdd.add_expr(big_clause)
+
+    print(f'size: {len(result)}, models: {bdd.count(result)}')
+            
+# Main method
 if __name__ == '__main__':
      # Specify the directory containing DIMACS graph files
     dir_str = "./data/less-dimacs/"
