@@ -69,16 +69,20 @@ def parse_dimacs(f):
         g.add_edge(u, v)  # Add edges to the graph
     return g
 
+# Creates the bdd
 def create_bdd(graph):
+    # Initialize bdd and result to check later
     bdd = BDD()
     result = bdd.true
 
     bin_vertex_nr = (graph.V - 1).bit_length()
 
-    for i in range(graph.V):
+    # Add all possible variables 
+    for i in range(bin_vertex_nr):
         bdd.add_var(f'x_{i}')
         bdd.add_var(f'x_{i}_prime')
 
+    # Loop over all vertices in the adjacency list
     for i in range(len(graph.graph)):
         from_vertex = bin(i)[2:]
         from_vertex = f'{from_vertex.zfill(bin_vertex_nr)}'
