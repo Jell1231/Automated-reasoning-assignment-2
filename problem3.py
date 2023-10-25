@@ -1,5 +1,5 @@
 import os
-from dd.cudd import bdd
+from dd.cudd import BDD
 from time import time
 
 # Define a Graph class to represent the graph and perform coloring
@@ -69,6 +69,39 @@ def parse_dimacs(f):
         g.add_edge(u, v)  # Add edges to the graph
     return g
 
+def create_bdd(graph):
+    bdd = BDD()
+    result = bdd.true
+
+    bin_vertex_nr = (graph.V - 1).bit_length()
+
+    for i in range(graph.V):
+        bdd.add_var(f'x_{i}')
+        bdd.add_var(f'x_{i}_prime')
+
+    for i in range(len(graph.graph)):
+        from_vertex = bin(i)[2:]
+        from_vertex = f'{from_vertex.zfill(bin_vertex_nr)}'
+        for j in range(len(graph.graph[i])):
+            to_vertex = bin(graph.graph[i][j])[2:]
+            to_vertex = f'{to_vertex.zfill(bin_vertex_nr)}'
+            
+            clause = []
+            number = 0
+            for nr in from_vertex:
+                clause.append(f'!x_{number}' if nr=="0" else f'x_{number}')
+                number+=1
+            
+            number = 0
+            for nr in to_vertex:
+                clause.append(f'!x_{number}_prime' if nr=="0" else f'x_{number}_prime')
+                number+=1
+            
+            big_clause = "(" + ' & '.join(clause) + ")"
+            result |= bdd.add_expr(big_clause)
+            
+
+
 if __name__ == '__main__':
      # Specify the directory containing DIMACS graph files
     dir_str = "./data/less-dimacs/"
@@ -78,9 +111,12 @@ if __name__ == '__main__':
 
     for file in os.listdir(directory):
         start = time()
+
         # Initialize the BDD manager
         filename = os.fsdecode(file)
 
-        # Parse the DIMACS file and create the graph
-        graph = parse_dimacs(f"{dir_str}{filename}")
-        print(graph[1])
+        if (filename=="gcd.col"):        
+            # Parse the DIMACS file and create the graph
+            graph = parse_dimacs(f"{dir_str}{filename}")
+
+            create_bdd(graph)
