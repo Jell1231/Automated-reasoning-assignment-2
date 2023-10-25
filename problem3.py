@@ -1,4 +1,5 @@
 import os
+import re
 from dd.cudd import BDD
 from time import time
 
@@ -81,6 +82,7 @@ def create_bdd(graph):
         bdd.add_var(f'x_{i}')
         bdd.add_var(f'x_{i}_prime')
 
+    xor_clauses = []
     # Loop over all vertices in the adjacency list and create all transition clauses accordingly
     for i in range(len(graph.graph)):
         from_vertex = bin(i)[2:]
@@ -104,10 +106,11 @@ def create_bdd(graph):
             
             # Transition from state to state (x_0 & !x_1 & x_2 & x3 & x_0_prime & !x_1_prime & x_2_prime & x3_prime)
             big_clause = "(" + ' & '.join(clause) + ")"
+            xor_clauses.append(big_clause)
             print(big_clause)
             
-            # Or everything
-            result |= bdd.add_expr(big_clause)
+    # XOr everything
+    result = bdd.add_expr("(" + ' ^ '.join(xor_clauses) + ")")
 
     bit_max = bin_vertex_nr**2
     
@@ -125,24 +128,38 @@ def create_bdd(graph):
         print(big_clause)
         result &= bdd.add_expr(big_clause)
     
-    target = bdd.add_expr(fr'!x_0 & x_1')
-    q = bdd.false
-    qold = None
-    prime = {"x_0": "x_0_prime", "x_1": "x_1_prime"}
-    qvars = {"x_0_prime", "x_1_prime"}
-    # fixpoint reached ?
-    while q != qold:
-        print(bdd.to_expr(q))
-        qold = q
-        next_q = bdd.let(prime, q)
-        u = result & next_q
-        # existential quantification over x0', x1'
-        pred = bdd.quantify(u, qvars, forall=False)
-        q = q | pred | target
+    states = []
+    states.append('!x_0 & !x_1')
+    states.append('!x_0 &  x_1')
+    states.append('!x_0 &  x_1')
+    states.append('!x_0 &  x_1')
+    states.append('!x_0 &  x_1')
+    states.append(' x_0 & !x_1')
+    states.append('!x_0 &  x_1')
+    states.append('!x_0 &  x_1')
+    states.append(' x_0 & !x_1')
+    states.append(' x_0 & x_1')
+    states.append(' x_0 & x_1')
+    states.append(' x_0 & x_1')
+    # states.append('!x_0 &  x_1')
     
-    # print(list(bdd.pick_iter(q)))
-    print(bdd.pick(q))
-    print(bdd.to_expr(q))
+    print(check_trace(bdd, result, states))
+
+def check_trace(bdd, result, states):
+    test_bdd = BDD()
+    [test_bdd.add_var(var) for var in bdd.vars]
+    # test_expression = bdd.copy(result, test_bdd)
+    for i in range(len(states)-1):
+        test_expression = bdd.copy(result, test_bdd)
+        state = states[i]
+        test_expression &= test_bdd.add_expr(fr'{state}')
+        next_state = re.sub(r'x_(\d+)', lambda match: f'x_{match.group(1)}_prime', states[i+1])
+        test_expression &= test_bdd.add_expr(fr'{next_state}')
+        model_count = test_bdd.count(test_expression)
+        if model_count == 0:
+            print("Not a satisfying trace")
+            return False
+    return True
 
 # Main method
 if __name__ == '__main__':
@@ -157,6 +174,7 @@ if __name__ == '__main__':
 
         # Initialize the BDD manager
         filename = os.fsdecode(file)
+        print(filename)
 
         # if (filename=="gcd.col"):        
         # Parse the DIMACS file and create the graph
