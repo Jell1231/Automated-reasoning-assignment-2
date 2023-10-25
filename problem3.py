@@ -50,9 +50,13 @@ def parse_dimacs(f):
 
     vertices = None
     edges = []
+    paths = []
 
     for line in lines:
         if line.startswith('c'):
+            if line.split()[1] == 'path':
+                path = [int(num) for num in line.strip().split()[2:]]
+                paths.append(path)
             # Ignore comments
             continue
         elif line.startswith('p'):
@@ -67,7 +71,7 @@ def parse_dimacs(f):
     g = Graph(vertices)
     for u, v in edges:
         g.add_edge(u, v)  # Add edges to the graph
-    return g
+    return g, paths
 
 # Creates the bdd
 def create_bdd(graph):
@@ -128,22 +132,30 @@ def create_bdd(graph):
         print(big_clause)
         result &= bdd.add_expr(big_clause)
     
-    states = []
-    states.append('!x_0 & !x_1')
-    states.append('!x_0 &  x_1')
-    states.append('!x_0 &  x_1')
-    states.append('!x_0 &  x_1')
-    states.append('!x_0 &  x_1')
-    states.append(' x_0 & !x_1')
-    states.append('!x_0 &  x_1')
-    states.append('!x_0 &  x_1')
-    states.append(' x_0 & !x_1')
-    states.append(' x_0 & x_1')
-    states.append(' x_0 & x_1')
-    states.append(' x_0 & x_1')
-    # states.append('!x_0 &  x_1')
-    
-    print(check_trace(bdd, result, states))
+    return bdd, result
+
+
+def check_path(bdd, result, paths):
+    passes = 0
+    for path in paths:
+        max_path_node = max(path) - 1
+        degree = max_path_node.bit_length()  # Automatically detect the binary degree
+        states = []
+        for p in path:
+            state_bits = bin(p-1)[2:]
+            bit_string = f'{state_bits.zfill(degree)}'
+            state = []
+            for i in range(len(bit_string)):
+                state.append(f'x_{i}' if bit_string[i] == "1" else f'!x_{i}')
+            states.append(' & '.join(state))
+        success = check_trace(bdd, result, states)
+        if success:
+            passes += 1
+            print(f"{path} is possible")
+        else:
+            print(f"{path} is not possible")
+    return passes
+
 
 def check_trace(bdd, result, states):
     test_bdd = BDD()
@@ -152,14 +164,17 @@ def check_trace(bdd, result, states):
     for i in range(len(states)-1):
         test_expression = bdd.copy(result, test_bdd)
         state = states[i]
-        test_expression &= test_bdd.add_expr(fr'{state}')
+        try:
+            test_expression &= test_bdd.add_expr(fr'{state}')
+        except ValueError:
+            return False
         next_state = re.sub(r'x_(\d+)', lambda match: f'x_{match.group(1)}_prime', states[i+1])
         test_expression &= test_bdd.add_expr(fr'{next_state}')
         model_count = test_bdd.count(test_expression)
         if model_count == 0:
-            print("Not a satisfying trace")
             return False
     return True
+
 
 # Main method
 if __name__ == '__main__':
@@ -178,7 +193,8 @@ if __name__ == '__main__':
 
         # if (filename=="gcd.col"):        
         # Parse the DIMACS file and create the graph
-        graph = parse_dimacs(f"{dir_str}{filename}")
+        graph, paths = parse_dimacs(f"{dir_str}{filename}")
 
-        create_bdd(graph)
-        print()
+        bdd, result = create_bdd(graph)
+        passes = check_path(bdd, result, paths)
+        print(f"{passes} of the {len(paths)} have a possible trace in the graph")
